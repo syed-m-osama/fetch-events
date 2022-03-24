@@ -23,30 +23,22 @@ class EventsHome extends StatefulWidget {
 }
 
 class _EventsHomeState extends State<EventsHome> {
+  CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  String? kStr;
 
   @override
   void initState() {
     super.initState();
-
     _selectedDay = _focusedDay;
-    kStr = _selectedDay!.year.toString() +
-        _selectedDay!.month.toString() +
-        _selectedDay!.day.toString();
-    //_selectedEvents = ValueNotifier(_getEventsForDay(_selectedDay!));
   }
 
   @override
   Widget build(BuildContext context) {
-    kStr = _selectedDay!.year.toString() + //2022
-        _selectedDay!.month.toString() + //3
-        _selectedDay!.day.toString(); //23
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
-          title: Center(child: Text('hello')),
+          title: Center(child: Text('fetch-events')),
         ),
         body: Column(
           children: [
@@ -54,7 +46,6 @@ class _EventsHomeState extends State<EventsHome> {
               focusedDay: _focusedDay,
               firstDay: kFirstDay,
               lastDay: kLastDay,
-              calendarFormat: CalendarFormat.month,
               selectedDayPredicate: (day) {
                 return isSameDay(_selectedDay, day);
               },
@@ -64,45 +55,89 @@ class _EventsHomeState extends State<EventsHome> {
                   _focusedDay = focusedDay; // update `_focusedDay` here as well
                 });
               },
+              calendarFormat: _calendarFormat,
+              onFormatChanged: (format) {
+                if (_calendarFormat != format) {
+                  setState(() {
+                    _calendarFormat = format;
+                  });
+                }
+              },
               onPageChanged: (focusedDay) {
                 _focusedDay = focusedDay;
               },
             ),
-            TextButton(onPressed: () {}, child: Text('break')),
-            const SizedBox(height: 5.0),
+            Divider(
+              thickness: 1,
+            ),
+            const SizedBox(height: 10.0),
             Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection("eventsDate")
+                        .where('Date',
+                            isEqualTo:
+                                _selectedDay.toString().split(' ').elementAt(0))
                         .snapshots(),
                     builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                       if (!snapshot.hasData) {
                         log(snapshot.error.toString());
-                        return Text('No Events');
+                        return EventCard(
+                          eventTitle: 'NO DATA!!!',
+                        );
                       }
-                      // return ListView(
-                      //   children: snapshot.data!.docs.map((event) {
-                      //     return Center(
-                      //       child: ListTile(
-                      //         title: Text(event['events']),
-                      //       ),
-                      //     );
-                      //   }).toList(),
-                      // );
-                      final events = snapshot.data!.docs;
+
+                      var events = snapshot.data!.docs;
+                      List<EventCard> eventCards = [];
 
                       for (var event in events) {
-                        final date = event.get('dateString');
-                        if (date.toString() == kStr) {
-                          final arr = event.get('event');
-                          return Text(arr.toString());
-                        }
+                        var eventData = event.get('Event');
+                        var eventCard = EventCard(
+                          eventTitle: eventData,
+                        );
+                        eventCards.add(eventCard);
                       }
-                      return Text('random');
+                      if (eventCards.isEmpty) {
+                        return Text(
+                          'No Events',
+                          style: TextStyle(fontSize: 20.0),
+                        );
+                      }
+                      return ListView(
+                        children: eventCards,
+                      );
                     }))
           ],
         ),
       ),
+    );
+  }
+}
+
+class EventCard extends StatelessWidget {
+  final eventTitle;
+  //const EventCard({Key? key}) : super(key: key);
+
+  EventCard({this.eventTitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.0, vertical: 3.0),
+      child: Card(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
+          borderOnForeground: true,
+          elevation: 2.0,
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Text(
+                '$eventTitle',
+                style: TextStyle(fontSize: 20.0),
+              ),
+            ),
+          )),
     );
   }
 }
