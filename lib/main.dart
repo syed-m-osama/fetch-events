@@ -82,8 +82,9 @@ class _EventsHomeState extends State<EventsHome> {
                     builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                       if (!snapshot.hasData) {
                         log(snapshot.error.toString());
-                        return EventCard(
-                          eventTitle: 'NO DATA!!!',
+                        return Text(
+                          'NO DATA!!!',
+                          style: TextStyle(fontSize: 20.0),
                         );
                       }
 
